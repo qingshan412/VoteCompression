@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("-d","--DataDir", type=str,
                     help="directory for data",
-                    default = '../../data')
+                    default = '../../../data')
 parser.add_argument("-m","--Mode", type=str,
                     help="train or test or valid",
                     default = 'train')
