@@ -59,7 +59,7 @@ def save2npz(data_path, mode, dataset='cifar10'):
     labels_tmp = np.array(data_tmp['labels'])#10000
 
     m = data.shape[0]
-    data = data.reshape((m,channel_size,image_size,images_size))
+    data = data.reshape((m,channel_size,image_size,image_size))
     features_tmp = np.transpose(data,(0,2,3,1))
     
     if i < 1:
