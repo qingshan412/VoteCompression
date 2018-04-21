@@ -73,5 +73,4 @@ def save2npz(data_path, mode, dataset='cifar10'):
     features = features, labels = labels)
 
 if __name__ == "__main__":
-  save2npz(data_path=DataPath, mode=Mode, dataset=DataSet):
-  
+  save2npz(data_path=DataPath, mode=Mode, dataset=DataSet)
