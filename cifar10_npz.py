@@ -54,7 +54,7 @@ def save2npz(data_path, mode, dataset='cifar10'):
     data_files = glob(os.path.join(data_path, dataset, 'test*'))
   
   for i in range(len(data_files)):
-    print(data_files[i]+'...')
+    print(data_files[i]+' loading...')
     data_tmp = unpickle(data_files[i])
     data = data_tmp['data']#10000x3072
     labels_tmp = np.array(data_tmp['labels'])#10000
