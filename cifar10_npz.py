@@ -70,7 +70,7 @@ def save2npz(data_path, mode, dataset='cifar10'):
       features = np.vstack((features, features_tmp))
       labels = np.vstack((labels, labels_tmp))
   
-  np.savez(os.path.join(data_path, dataset, 'feature_'+ mode +'.npz'), 
+  np.savez(os.path.join(data_path, dataset, 'ground_'+ mode +'.npz'), 
     features = features, labels = labels)
 
 if __name__ == "__main__":
