@@ -17,62 +17,55 @@ class voter(object):
     self.levels = np.random.randint(0, level_number, size=[data_size,1])
     # .astype('int64')  
     # np.savez("levels.npz", levels = levels)
-    self.kcl = tf.contrib.kernel_methods.KernelLinearClassifier(
+    self.estimator_list=[]
+
+    # vote0
+    self.estimator_list.append(tf.contrib.kernel_methods.KernelLinearClassifier(
           feature_columns=[, ],
-          model_dir="voters/kcl",
-          n_classes=level_number,)
-    
+          model_dir="./voters/0",
+          n_classes=level_number))
+    # vote1
     kernel_mappers1 = tf.contrib.kernel_methods.RandomFourierFeatureMapper(
           input_dim=feature_size,
-          output_dim=feature_size+1)
-    self.kcg1 = tf.contrib.kernel_methods.KernelLinearClassifier(
+          output_dim=feature_size*2)
+    self.estimator_list.append(tf.contrib.kernel_methods.KernelLinearClassifier(
           feature_columns=[, ],
-          model_dir="voters/kcg1",
+          model_dir="./voters/1",
           n_classes=level_number,
-          kernel_mappers=kernel_mappers1)
-    
+          kernel_mappers=kernel_mappers1))
+    # vote2
     kernel_mappers2 = tf.contrib.kernel_methods.RandomFourierFeatureMapper(
           input_dim=feature_size,
-          output_dim=feature_size+2,
+          output_dim=int(feature_size/2),
           stddev=)
-    self.kcg2 = tf.contrib.kernel_methods.KernelLinearClassifier(
+    self.estimator_list.append(tf.contrib.kernel_methods.KernelLinearClassifier(
           feature_columns=[, ],
-          model_dir="voters/kcg2",
+          model_dir="./voters/2",
           n_classes=level_number,
-          kernel_mappers=kernel_mappers2)
+          kernel_mappers=kernel_mappers2))
+    #vote3
+    self.estimator_list.append(tf.estimator.LinearClassifier(
+          feature_columns=[,],
+          model_dir="./voters/lc",
+          n_classes=level_number))
+    #vote4
+    self.estimator_list.append(tf.estimator.BaselineClassifier(
+          model_dir="./voters/bc",
+          n_classes=level_number))
 
-    kernel_mappers5 = tf.contrib.kernel_methods.RandomFourierFeatureMapper(
-          input_dim=feature_size,
-          output_dim=feature_size+5,
-          stddev=)
-    self.kcg5 = tf.contrib.kernel_methods.KernelLinearClassifier(
-          feature_columns=[, ],
-          model_dir="voters/kcg5",
-          n_classes=level_number,
-          kernel_mappers=kernel_mappers5)
+  def vote2level(self):
+    ''' self.votes: [data_size, vote_size]
+    update self.levels: [data_size, 1]'''
+    for i in range(self.votes.shape[0]):
+      self.levels[i, 0] = np.argmax(np.bincount(self.votes[i,:]))
 
-    kernel_mappers10 = tf.contrib.kernel_methods.RandomFourierFeatureMapper(
-          input_dim=feature_size,
-          output_dim=feature_size+10,
-          stddev=)
-    self.kcg10 = tf.contrib.kernel_methods.KernelLinearClassifier(
-          feature_columns=[, ],
-          model_dir="voters/kcg10",
-          n_classes=level_number,
-          kernel_mappers=kernel_mappers10)
-
-    self.estimator = LinearEstimator(
-          head=tf.contrib.estimator.multi_label_head(n_classes=level_number),
-          feature_columns=[,])
-
-  def update(self, votes):
-    # votes: [data_size, vote_size]
-    # update self.levels: [data_size, 1]
-    for i in range(votes.shape[0]):
-        self.levels[i, 0] = np.argmax(np.bincount(votes[i,:]))
-
-  def vote(self):
-    xxx
+  def upate_vote(self, images):
+    '''update self.votes'''
+    column[0] = self.estimator_list[0].fit(image)
+    for i in range(len(self.estimator_list)-1):
+        column.append(self.estimator_list[i+1].fit(image))
+    votes = tf.stack(column)
+    
 
 class train_input(object):
   def __init__(self, sess, mode, batch_size):
