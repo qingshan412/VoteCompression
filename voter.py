@@ -110,14 +110,62 @@ class train_input(object):
   # @property
   def next_value(self):
     return self.sess.run(self.iterator.get_next())
+  
+  def test_input_fn(self):
+      return tf.estimator.inputs.numpy_input_fn(
+            x=self.features,#
+            y=self.labels,#
+            batch_size=128,
+            num_epochs=1,
+            shuffle=None,
+            queue_capacity=1000,
+            num_threads=1)
 
-def my_model_fn(
+def my_model_fn_level2(
     features, # This is batch_features from input_fn
     labels,   # This is batch_labels from input_fn
     mode,     # An instance of tf.estimator.ModeKeys
     params):  # Additional configuration
   
   
+  # Input Layer
+  # Reshape images to 4-D tensor: [batch_size, width, height, channels]
+  image_size = params['image_size']
+  input_layer = tf.reshape(features["images"], [-1, image_size, image_size, 3])
+
+  conv1 = tf.layers.conv2d(
+      inputs=input_layer,
+      filters=64,
+      kernel_size=[5, 5],
+      padding="same",
+      activation=tf.nn.relu)
+
+
+  tf.layers.conv2d(
+    inputs,
+    filters,
+    kernel_size,
+    strides=(1, 1),
+    padding='valid',
+    data_format='channels_last',
+    dilation_rate=(1, 1),
+    activation=None,
+    use_bias=True,
+    kernel_initializer=None,
+    bias_initializer=tf.zeros_initializer(),
+    kernel_regularizer=None,
+    bias_regularizer=None,
+    activity_regularizer=None,
+    kernel_constraint=None,
+    bias_constraint=None,
+    trainable=True,
+    name=None,
+    reuse=None
+)
+
+
+
+
   net = tf.feature_column.input_layer(features, params['feature_columns'])
   for units in params['hidden_units']:
     net = tf.layers.dense(net, units=units, activation=tf.nn.relu)
