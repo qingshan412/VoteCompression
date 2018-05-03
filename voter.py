@@ -66,6 +66,39 @@ class voter(object):
         column.append(self.estimator_list[i+1].fit(image))
     votes = tf.stack(column)
     
+class bp_voter(object):
+  def __init__(self, data_size, feature_size, level_number=2):
+    self.levels = np.random.randint(0, level_number, size=[data_size,1])
+    # .astype('int64')  
+    # np.savez("levels.npz", levels = levels)
+    self.estimator_list=[]
+
+    # vote0
+    self.estimator_list.append(tf.estimator.LinearClassifier(
+          feature_columns=[,],
+          model_dir="./voters/lc0",
+          n_classes=level_number))
+    # vote1
+    self.estimator_list.append(tf.estimator.LinearClassifier(
+          feature_columns=[,],
+          model_dir="./voters/lc1",
+          n_classes=level_number))
+    # vote2
+    self.estimator_list.append(tf.estimator.LinearClassifier(
+          feature_columns=[,],
+          model_dir="./voters/lc2",
+          n_classes=level_number))
+    
+  def vote2level(self):
+    ''' self.votes: [data_size, vote_size]
+    update self.levels: [data_size, 1]'''
+    for i in range(self.votes.shape[0]):
+      self.levels[i, 0] = np.argmax(np.bincount(self.votes[i,:]))
+
+  def upate_vote(self, images):
+    '''update self.votes'''
+    
+
 
 class train_input(object):
   def __init__(self, sess, mode, batch_size):
@@ -121,7 +154,7 @@ class train_input(object):
             queue_capacity=1000,
             num_threads=1)
 
-def my_model_fn_level2(
+def my_model_fn_level_1(
     features, # This is batch_features from input_fn
     labels,   # This is batch_labels from input_fn
     mode,     # An instance of tf.estimator.ModeKeys
@@ -131,209 +164,51 @@ def my_model_fn_level2(
   # Input Layer
   # Reshape images to 4-D tensor: [batch_size, width, height, channels]
   image_size = params['image_size']
+  batch_size = params['batch_size']
+  num_class = params['num_class']
+  lr = params['lr']
   input_layer = tf.reshape(features["images"], [-1, image_size, image_size, 3])
 
-  conv1 = tf.layers.conv2d(
-      inputs=input_layer,
-      filters=64,
-      kernel_size=[5, 5],
-      padding="same",
-      activation=tf.nn.relu)
+  conv1 = tf.layers.conv2d(inputs=input_layer, filters=64,
+        kernel_size=[5, 5], padding="same", activation=tf.nn.relu)
+  pool1 = tf.layers.max_pooling2d(conv1, pool_size=[3,3], strides=[2,2], padding='same')
+  norm1 = tf.nn.lrn(pool1, depth_radius=4, bias=1.0, alpha=0.001/9.0, beta=0.75)
+    
+  conv2 = tf.layers.conv2d(inputs=norm1, filters=64, kernel_size=[5, 5],
+        padding="same", activation=tf.nn.relu)
+  norm2 = tf.nn.lrn(conv2, depth_radius=4, bias=1.0, alpha=0.001/9.0, beta=0.75)
+  pool2 = tf.layers.max_pooling2d(norm2, pool_size=[3,3], strides=[2,2], padding='same')
+  
+  local3 = tf.layers.dense(tf.reshape(pool2, [batch_size,-1]), units=384, activation=tf.nn.relu)
+  logits = tf.layers.dense(local3, units=num_class, activation=tf.nn.relu)
+
+  # Compute predictions.
+  predicted_classes = tf.argmax(logits, 1)
+  if mode == tf.estimator.ModeKeys.PREDICT:
+      predictions = {
+          'class_ids': predicted_classes[:, tf.newaxis],
+          'probabilities': tf.nn.softmax(logits),
+          'logits': logits,
+      }
+      return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
 
-  tf.layers.conv2d(
-    inputs,
-    filters,
-    kernel_size,
-    strides=(1, 1),
-    padding='valid',
-    data_format='channels_last',
-    dilation_rate=(1, 1),
-    activation=None,
-    use_bias=True,
-    kernel_initializer=None,
-    bias_initializer=tf.zeros_initializer(),
-    kernel_regularizer=None,
-    bias_regularizer=None,
-    activity_regularizer=None,
-    kernel_constraint=None,
-    bias_constraint=None,
-    trainable=True,
-    name=None,
-    reuse=None
-)
+  # Compute loss.
+  loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
 
+  # Compute evaluation metrics.
+  accuracy = tf.metrics.accuracy(labels=labels,
+                                 predictions=predicted_classes,
+                                 name='acc_op')
+  metrics = {'accuracy': accuracy}
+  tf.summary.scalar('accuracy', accuracy[1])
 
+  if mode == tf.estimator.ModeKeys.EVAL:
+    return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
 
+  # Create training op.
+  if mode == tf.estimator.ModeKeys.TRAIN:
+    optimizer = tf.train.GradientDescentOptimizer(lr)
+    train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
+    return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
 
-  net = tf.feature_column.input_layer(features, params['feature_columns'])
-  for units in params['hidden_units']:
-    net = tf.layers.dense(net, units=units, activation=tf.nn.relu)
-
-    # Compute logits (1 per class).
-    logits = tf.layers.dense(net, params['n_classes'], activation=None)
-
-    # Compute predictions.
-    predicted_classes = tf.argmax(logits, 1)
-    if mode == tf.estimator.ModeKeys.PREDICT:
-        predictions = {
-            'class_ids': predicted_classes[:, tf.newaxis],
-            'probabilities': tf.nn.softmax(logits),
-            'logits': logits,
-        }
-        return tf.estimator.EstimatorSpec(mode, predictions=predictions)
-
-    # Compute loss.
-    loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
-
-    # Compute evaluation metrics.
-    accuracy = tf.metrics.accuracy(labels=labels,
-                                   predictions=predicted_classes,
-                                   name='acc_op')
-    metrics = {'accuracy': accuracy}
-    tf.summary.scalar('accuracy', accuracy[1])
-
-    if mode == tf.estimator.ModeKeys.EVAL:
-        return tf.estimator.EstimatorSpec(
-            mode, loss=loss, eval_metric_ops=metrics)
-
-    # Create training op.
-    assert mode == tf.estimator.ModeKeys.TRAIN
-
-    optimizer = tf.train.AdagradOptimizer(learning_rate=0.1)
-    train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
-    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
-#   run_config = tf.ConfigProto()
-#   run_config.gpu_options.allow_growth=True
-#   with tf.Session(config=run_config) as sess:
-#  Copyright 2016 The TensorFlow Authors. All Rights Reserved.
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-"""An Example of a custom Estimator for the Iris dataset."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-import argparse
-import tensorflow as tf
-
-import iris_data
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--batch_size', default=100, type=int, help='batch size')
-parser.add_argument('--train_steps', default=1000, type=int,
-                    help='number of training steps')
-
-def my_model(features, labels, mode, params):
-    """DNN with three hidden layers, and dropout of 0.1 probability."""
-    # Create three fully connected layers each layer having a dropout
-    # probability of 0.1.
-    net = tf.feature_column.input_layer(features, params['feature_columns'])
-    for units in params['hidden_units']:
-        net = tf.layers.dense(net, units=units, activation=tf.nn.relu)
-
-    # Compute logits (1 per class).
-    logits = tf.layers.dense(net, params['n_classes'], activation=None)
-
-    # Compute predictions.
-    predicted_classes = tf.argmax(logits, 1)
-    if mode == tf.estimator.ModeKeys.PREDICT:
-        predictions = {
-            'class_ids': predicted_classes[:, tf.newaxis],
-            'probabilities': tf.nn.softmax(logits),
-            'logits': logits,
-        }
-        return tf.estimator.EstimatorSpec(mode, predictions=predictions)
-
-    # Compute loss.
-    loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
-
-    # Compute evaluation metrics.
-    accuracy = tf.metrics.accuracy(labels=labels,
-                                   predictions=predicted_classes,
-                                   name='acc_op')
-    metrics = {'accuracy': accuracy}
-    tf.summary.scalar('accuracy', accuracy[1])
-
-    if mode == tf.estimator.ModeKeys.EVAL:
-        return tf.estimator.EstimatorSpec(
-            mode, loss=loss, eval_metric_ops=metrics)
-
-    # Create training op.
-    assert mode == tf.estimator.ModeKeys.TRAIN
-
-    optimizer = tf.train.AdagradOptimizer(learning_rate=0.1)
-    train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
-    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
-
-
-def main(argv):
-    args = parser.parse_args(argv[1:])
-
-    # Fetch the data
-    (train_x, train_y), (test_x, test_y) = iris_data.load_data()
-
-    # Feature columns describe how to use the input.
-    my_feature_columns = []
-    for key in train_x.keys():
-        my_feature_columns.append(tf.feature_column.numeric_column(key=key))
-
-    # Build 2 hidden layer DNN with 10, 10 units respectively.
-    classifier = tf.estimator.Estimator(
-        model_fn=my_model,
-        params={
-            'feature_columns': my_feature_columns,
-            # Two hidden layers of 10 nodes each.
-            'hidden_units': [10, 10],
-            # The model must choose between 3 classes.
-            'n_classes': 3,
-        })
-
-    # Train the Model.
-    classifier.train(
-        input_fn=lambda:iris_data.train_input_fn(train_x, train_y, args.batch_size),
-        steps=args.train_steps)
-
-    # Evaluate the model.
-    eval_result = classifier.evaluate(
-        input_fn=lambda:iris_data.eval_input_fn(test_x, test_y, args.batch_size))
-
-    print('\nTest set accuracy: {accuracy:0.3f}\n'.format(**eval_result))
-
-    # Generate predictions from the model
-    expected = ['Setosa', 'Versicolor', 'Virginica']
-    predict_x = {
-        'SepalLength': [5.1, 5.9, 6.9],
-        'SepalWidth': [3.3, 3.0, 3.1],
-        'PetalLength': [1.7, 4.2, 5.4],
-        'PetalWidth': [0.5, 1.5, 2.1],
-    }
-
-    predictions = classifier.predict(
-        input_fn=lambda:iris_data.eval_input_fn(predict_x,
-                                                labels=None,
-                                                batch_size=args.batch_size))
-
-    for pred_dict, expec in zip(predictions, expected):
-        template = ('\nPrediction is "{}" ({:.1f}%), expected "{}"')
-
-        class_id = pred_dict['class_ids'][0]
-        probability = pred_dict['probabilities'][class_id]
-
-        print(template.format(iris_data.SPECIES[class_id],
-                              100 * probability, expec))
-
-
-if __name__ == '__main__':
-    tf.logging.set_verbosity(tf.logging.INFO)
-    tf.app.run(main)
