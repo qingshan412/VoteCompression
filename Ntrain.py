@@ -22,6 +22,8 @@ flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
 
 FLAGS = flags.FLAGS
 
+T = 10000 #initial temperature
+
 def level_init():
     with np.load(os.path.join(FLAGS.data_dir,FLAGS.dataset,
             "ground_train.npz")) as data:
@@ -39,13 +41,13 @@ def level_assign(images, labels, levels):
         level_lables.append(labels[pos,:])
     return level_images, level_labels
 
-def model_assign():
-    level_infers_op = []
-    level_losses_op = []
-    for i in range(FLAGS.level_number):
-        level_infers_op.append(Dmodels.infer(i))
-        level_losses_op.append(Dmodels.loss(i))
-    return level_infers_op, level_losses_op
+# def model_assign():
+#     level_infers_op = []
+#     level_losses_op = []
+#     for i in range(FLAGS.level_number):
+#         level_infers_op.append(Dmodels.infer(i))
+#         level_losses_op.append(Dmodels.loss(i))
+#     return level_infers_op, level_losses_op
 
 def main(_):
     levels = level_init()
@@ -55,32 +57,69 @@ def main(_):
         lablels =  data["labels"]
 
     level_images, level_labels = level_assign(images, labels, levels)
-
-    level_infers_op, level_losses_op = model_assign()
+    
+    level_opt_op_0 = tf.train.AdamOptimizer(learning_rate=0.1)
+    level_opt_op_1 = tf.train.AdamOptimizer(learning_rate=0.01)
+    level_opt_op_2 = tf.train.AdamOptimizer(learning_rate=0.01)
+    level_opt_ops = [level_opt_0, level_opt_1, level_opt_2]
 
     level_logits = []
+    #level_logit_values = []
     level_losses = []
+    level_loss_values = []
+    level_opts = []
+    for i in range(FLAGS.level_number):
+        level_logits.append(0)
+        #level_logit_values.append(0)
+        level_losses.append(0)
+        level_loss_values.append(0)
+        level_opts.append(0)
+    
+
+    for i in range(FLAGS.level_number):
+        # train for every model
+        if level_images[i]:
+            # train model[i] by level_images[i]
+            # output = inference[i]
+            if i == 0:
+                level_logits[i] = Dmodels.level_infers_op_0(level_images[i])
+                level_losses[i] = Dmodels.level_losses_op_0(level_labels[i], level_logits[i])
+            elif i == 1:
+                level_logits[i] = Dmodels.level_infers_op_1(level_images[i])
+                level_losses[i] = Dmodels.level_losses_op_1(level_labels[i], level_logits[i])
+            elif i == 2:
+                level_logits[i] = Dmodels.level_infers_op_2(level_images[i])
+                level_losses[i] = Dmodels.level_losses_op_2(level_labels[i], level_logits[i])
+            else:
+                print("unsupported level "+ str(i)+"!")
+
+            level_opts[i] = level_opt_ops[i].minimize(level_losses[i])
+                
+    # Build an initialization operation to run below.
+    init = tf.global_variables_initializer()
+
+    # Start running operations on the Graph.
+    sess = tf.Session(config=tf.ConfigProto(log_device_placement=FLAGS.log_device_placement))
+    sess.run(init)
+
 
     for it in range(FLAGS.max_iter):
         # iteration
         for i in range(FLAGS.level_number):
-            # train for every model
-            if level_images[i]:
-                # train model[i] by level_images[i]
-                # output = inference[i]
-                level_logits[i] = level_infers_op[i](level_images[i])
-                level_losses[i] = level_losses_op[i](level_labels[i], level_logits[i])
-                # sess.run()
-                
-                # test accuracy
-                xxx
-                print
-                # move samples
-                for j in range(output.shape[0]):
-                    if output[j] == level_labels[i][j]:
-                        level_images[i][j]+level_labels[i][j] prob to move/stay
-                    else:
-                        level_images[i][j]+level_labels[i][j] prob to move/stay
+            _, loss_t, logit_t = ess.run([level_opts[i], level_losses[i], level_logits[i]])
+            level_loss_values[i] = loss_t
+            # level_logit_values[i] = logit_t
+            # test accuracy
+            xxx
+            print
+
+            # move samples
+            output = np.argmax(logit_t, 1)
+            for j in range(output.shape[0]):
+                if output[j] == level_labels[i][j]:
+                    level_images[i][j]+level_labels[i][j] prob to move/stay
+                else:
+                    level_images[i][j]+level_labels[i][j] prob to move/stay
     
     
 
