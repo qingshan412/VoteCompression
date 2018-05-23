@@ -41,7 +41,7 @@ def level_assign(images, labels, levels):
     for i in range(FLAGS.level_number):
         pos = np.argwhere(levels==i)
         level_images.append(images[pos,:,:])
-        level_lables.append(labels[pos,:])
+        level_labels.append(labels[pos,:])
     return level_images, level_labels
 
 # def model_assign():
