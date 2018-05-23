@@ -23,6 +23,8 @@ flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
 FLAGS = flags.FLAGS
 
 T = 10000 #initial temperature
+A = 10 #coefficient for stay prob when correct (e^(-A*T))
+B = 100 #coefficient for stay prob when when wrong (e^(-B*T))
 
 def level_init():
     with np.load(os.path.join(FLAGS.data_dir,FLAGS.dataset,
@@ -50,6 +52,8 @@ def level_assign(images, labels, levels):
 #     return level_infers_op, level_losses_op
 
 def main(_):
+    np.random.seed(22)
+
     levels = level_init()
     with np.load(os.path.join(FLAGS.data_dir,FLAGS.dataset,
             "ground_train.npz")) as data:
@@ -110,15 +114,26 @@ def main(_):
             level_loss_values[i] = loss_t
             # level_logit_values[i] = logit_t
             # test accuracy
-            xxx
-            print
+            # xxx
+            # print
 
             # move samples
             output = np.argmax(logit_t, 1)
             for j in range(output.shape[0]):
                 if output[j] == level_labels[i][j]:
-                    level_images[i][j]+level_labels[i][j] prob to move/stay
+                    if np.random.random_sample() > np.exp(-A*T):
+                        if i<1:
+                            level_image[i][j]
+                            level_labels[i][j]
+                        elif i>(FLAGS.level_number-2):
+                        else:
+                            xxx 
+                        level_images[i][j]+level_labels[i][j] prob to move/stay
                 else:
+                    if np.random.random_sample() > np.exp(-A*T):
+                        if i<1:
+                        elif i>(FLAGS.level_number-2):
+                        else:
                     level_images[i][j]+level_labels[i][j] prob to move/stay
     
     
