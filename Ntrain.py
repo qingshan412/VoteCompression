@@ -83,7 +83,7 @@ def main(_):
 
     for i in range(FLAGS.level_number):
         # train for every model
-        if level_images[i]:
+        if len(level_images[i])>0:
             # train model[i] by level_images[i]
             # output = inference[i]
             if i == 0:
