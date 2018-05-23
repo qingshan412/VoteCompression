@@ -73,7 +73,8 @@ def level_infers_op_0(images):
                                                 shape=[5, 5, 3, 64],
                                                 stddev=5e-2,
                                                 wd=0.0)
-            conv = tf.nn.conv2d(images, kernel, [1, 4, 4, 1], padding='SAME')
+            conv = tf.nn.conv2d(tf.convert_to_tensor(images, dtype=tf.float32), 
+                kernel, [1, 4, 4, 1], padding='SAME')
             biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
             pre_activation = tf.nn.bias_add(conv, biases)
             conv1 = tf.nn.relu(pre_activation, name=scope.name)
@@ -121,7 +122,7 @@ def level_infers_op_1(images):
                                                 shape=[5, 5, 3, 64],
                                                 stddev=5e-2,
                                                 wd=0.0)
-            conv = tf.nn.conv2d(images, kernel, [1, 2, 2, 1], padding='SAME')
+            conv = tf.nn.conv2d(tf.convert_to_tensor(images, dtype=tf.float32), kernel, [1, 2, 2, 1], padding='SAME')
             biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
             pre_activation = tf.nn.bias_add(conv, biases)
             conv1 = tf.nn.relu(pre_activation, name=scope.name)
@@ -187,7 +188,7 @@ def level_infers_op_2(images):
                                                 shape=[5, 5, 3, 64],
                                                 stddev=5e-2,
                                                 wd=0.0)
-            conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
+            conv = tf.nn.conv2d(tf.convert_to_tensor(images, dtype=tf.float32), kernel, [1, 1, 1, 1], padding='SAME')
             biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
             pre_activation = tf.nn.bias_add(conv, biases)
             conv1 = tf.nn.relu(pre_activation, name=scope.name)
