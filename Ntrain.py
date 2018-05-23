@@ -61,8 +61,8 @@ def main(_):
         images = data["features"]
         labels =  data["labels"]
 
-    print('images size:')
-    print(images.shape)
+    print('levels size:')
+    print(levels.shape)
 
     level_images, level_labels = level_assign(images, labels, levels)
     
