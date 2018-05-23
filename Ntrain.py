@@ -66,7 +66,7 @@ def main(_):
     level_opt_op_0 = tf.train.AdamOptimizer(learning_rate=0.1)
     level_opt_op_1 = tf.train.AdamOptimizer(learning_rate=0.01)
     level_opt_op_2 = tf.train.AdamOptimizer(learning_rate=0.01)
-    level_opt_ops = [level_opt_0, level_opt_1, level_opt_2]
+    level_opt_ops = [level_opt_op_0, level_opt_op_1, level_opt_op_2]
 
     level_logits = []
     #level_logit_values = []
