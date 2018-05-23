@@ -57,7 +57,7 @@ def save2npz(data_path, mode, dataset='cifar10'):
     print(data_files[i]+' loading...')
     data_tmp = unpickle(data_files[i])
     data = data_tmp['data']#10000x3072
-    labels_tmp = np.array(data_tmp['labels'])#10000
+    labels_tmp = np.array(data_tmp['labels']).reshape((-1,1))#10000x1
 
     m = data.shape[0]
     data = data.reshape((m,channel_size,image_size,image_size))
