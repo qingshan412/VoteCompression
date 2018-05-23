@@ -59,7 +59,7 @@ def main(_):
     with np.load(os.path.join(FLAGS.data_dir,FLAGS.dataset,
             "ground_train.npz")) as data:
         images = data["features"]
-        lablels =  data["labels"]
+        labels =  data["labels"]
 
     level_images, level_labels = level_assign(images, labels, levels)
     
