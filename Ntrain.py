@@ -86,6 +86,8 @@ def main(_):
         if len(level_images[i])>0:
             # train model[i] by level_images[i]
             # output = inference[i]
+            print('level '+str(i)+':')
+            print(level_images[i].shape)
             if i == 0:
                 level_logits[i] = Dmodels.level_infers_op_0(level_images[i])
                 level_losses[i] = Dmodels.level_losses_op_0(level_labels[i], level_logits[i])
