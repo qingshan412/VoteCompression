@@ -123,18 +123,33 @@ def main(_):
                 if output[j] == level_labels[i][j]:
                     if np.random.random_sample() > np.exp(-A*T):
                         if i<1:
-                            level_image[i][j]
-                            level_labels[i][j]
+                            level_image[i+1].append(level_image[i].pop(j))
+                            level_labels[i+1].append(level_labels[i].pop(j))
                         elif i>(FLAGS.level_number-2):
+                            level_image[i-1].append(level_image[i].pop(j))
+                            level_labels[i-1].append(level_labels[i].pop(j))
                         else:
-                            xxx 
-                        level_images[i][j]+level_labels[i][j] prob to move/stay
+                            if np.random.random_sample() < 0.5:
+                                level_image[i+1].append(level_image[i].pop(j))
+                                level_labels[i+1].append(level_labels[i].pop(j))
+                            else:
+                                level_image[i-1].append(level_image[i].pop(j))
+                                level_labels[i-1].append(level_labels[i].pop(j))
                 else:
-                    if np.random.random_sample() > np.exp(-A*T):
+                    if np.random.random_sample() > np.exp(-B*T):
                         if i<1:
+                            level_image[i+1].append(level_image[i].pop(j))
+                            level_labels[i+1].append(level_labels[i].pop(j))
                         elif i>(FLAGS.level_number-2):
+                            level_image[i-1].append(level_image[i].pop(j))
+                            level_labels[i-1].append(level_labels[i].pop(j))
                         else:
-                    level_images[i][j]+level_labels[i][j] prob to move/stay
+                            if np.random.random_sample() < 0.5:
+                                level_image[i+1].append(level_image[i].pop(j))
+                                level_labels[i+1].append(level_labels[i].pop(j))
+                            else:
+                                level_image[i-1].append(level_image[i].pop(j))
+                                level_labels[i-1].append(level_labels[i].pop(j))
     
     
 
