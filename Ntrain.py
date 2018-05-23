@@ -61,6 +61,9 @@ def main(_):
         images = data["features"]
         labels =  data["labels"]
 
+    print('images size:')
+    print(images.shape)
+
     level_images, level_labels = level_assign(images, labels, levels)
     
     level_opt_op_0 = tf.train.AdamOptimizer(learning_rate=0.1)
