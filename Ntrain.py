@@ -40,10 +40,10 @@ def level_assign(images, labels, levels):
     level_labels = []
     for i in range(FLAGS.level_number):
         pos = np.argwhere(levels==i)[:,0]
-        print('pos...')
-        print(pos.shape)
-        print('assign...')
-        print(images[pos,:,:].shape)
+        # print('pos...')
+        # print(pos.shape)
+        # print('assign...')
+        # print(images[pos,:,:].shape)
         level_images.append(images[pos,:,:])
         level_labels.append(labels[pos,:])
     return level_images, level_labels
@@ -65,20 +65,20 @@ def main(_):
         images = data["features"]
         labels =  data["labels"]
 
-    print('images size:')
-    print(images.shape)
-    print('labels size:')
-    print(labels.shape)
-    print('levels size:')
-    print(levels.shape)
-    print(np.unique(levels))
+    # print('images size:')
+    # print(images.shape)
+    # print('labels size:')
+    # print(labels.shape)
+    # print('levels size:')
+    # print(levels.shape)
+    # print(np.unique(levels))
 
     level_images, level_labels = level_assign(images, labels, levels)
 
-    print('level_images:')
-    print(len(level_images))
-    print(level_images[0].shape)
-    exit(0)
+    # print('level_images:')
+    # print(len(level_images))
+    # print(level_images[0].shape)
+    # exit(0)
 
     
     level_opt_op_0 = tf.train.AdamOptimizer(learning_rate=0.1)
