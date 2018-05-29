@@ -67,6 +67,7 @@ def main(_):
     print(labels.shape)
     print('levels size:')
     print(levels.shape)
+    print(np.unique(levels))
 
     level_images, level_labels = level_assign(images, labels, levels)
 
