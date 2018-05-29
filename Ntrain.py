@@ -39,7 +39,7 @@ def level_assign(images, labels, levels):
     level_images = []
     level_labels = []
     for i in range(FLAGS.level_number):
-        pos = np.argwhere(levels==i)
+        pos = np.argwhere(levels==i)[:,0]
         print('pos...')
         print(pos.shape)
         print('assign...')
