@@ -5,6 +5,8 @@ import re
 import numpy as np
 import tensorflow as tf
 
+NUM_CLASSES = 10
+
 def _activation_summary(x):
     """Helper to create summaries for activations.
 
