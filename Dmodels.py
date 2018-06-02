@@ -67,7 +67,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
     return var
 
 
-def level_infers_op_0(images):
+def level_infers_op_0(images, FLAGS):
     with tf.variable_scope('level_0') as scope:
         # conv1
         with tf.variable_scope('conv1') as scope:
@@ -116,7 +116,7 @@ def level_infers_op_0(images):
 
     
 
-def level_infers_op_1(images):
+def level_infers_op_1(images, FLAGS):
     with tf.variable_scope('level_1') as scope:
         # conv1
         with tf.variable_scope('conv1') as scope:
@@ -182,7 +182,7 @@ def level_infers_op_1(images):
     return softmax_linear
 
 
-def level_infers_op_2(images):
+def level_infers_op_2(images, FLAGS):
     with tf.variable_scope('level_2') as scope:
         # conv1
         with tf.variable_scope('conv1') as scope:
@@ -358,7 +358,7 @@ NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
 INITIAL_LEARNING_RATE = 0.1       # Initial learning rate.
 
-def train(total_loss, global_step):
+def train(total_loss, global_step, FLAGS):
     """Train CIFAR-10 model.
 
     Create an optimizer and apply to all trainable variables. Add moving

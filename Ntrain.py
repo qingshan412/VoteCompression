@@ -107,13 +107,13 @@ def main(_):
             print('level '+str(i)+':')
             print(level_images[i].shape)
             if i == 0:
-                level_logits[i] = Dmodels.level_infers_op_0(level_images[i])
+                level_logits[i] = Dmodels.level_infers_op_0(level_images[i], FLAGS)
                 level_losses[i] = Dmodels.level_losses_op_0(level_labels[i], level_logits[i])
             elif i == 1:
-                level_logits[i] = Dmodels.level_infers_op_1(level_images[i])
+                level_logits[i] = Dmodels.level_infers_op_1(level_images[i], FLAGS)
                 level_losses[i] = Dmodels.level_losses_op_1(level_labels[i], level_logits[i])
             elif i == 2:
-                level_logits[i] = Dmodels.level_infers_op_2(level_images[i])
+                level_logits[i] = Dmodels.level_infers_op_2(level_images[i], FLAGS)
                 level_losses[i] = Dmodels.level_losses_op_2(level_labels[i], level_logits[i])
             else:
                 print("unsupported level "+ str(i)+"!")
@@ -131,7 +131,7 @@ def main(_):
     for it in range(FLAGS.max_iter):
         # iteration
         for i in range(FLAGS.level_number):
-            _, loss_t, logit_t = ess.run([level_opts[i], level_losses[i], level_logits[i]])
+            _, loss_t, logit_t = sess.run([level_opts[i], level_losses[i], level_logits[i]])
             level_loss_values[i] = loss_t
             # level_logit_values[i] = logit_t
             # test accuracy
