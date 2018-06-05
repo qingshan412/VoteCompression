@@ -46,6 +46,7 @@ def level_assign(images, labels, levels):
         # print(images[pos,:,:].shape)
         level_images.append(images[pos,:,:])
         level_labels.append(labels[pos,:])
+        level_labels[i]=np.squeeze(level_labels[i]) 
     return level_images, level_labels
 
 # def model_assign():
