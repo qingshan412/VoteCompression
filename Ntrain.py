@@ -90,16 +90,16 @@ def main(_):
     level_logits = []
     #level_logit_values = []
     level_losses = []
-    level_loss_values = []
     level_opts = []
     #Y.D.
     level_images_tensor=[]
     level_labels_tensor=[]
+    level_loss_values = [[] for i in range(3)]
+    level_num_values = [[] for i in range(3)]
     for i in range(FLAGS.level_number):
         level_logits.append(0)
         #level_logit_values.append(0)
         level_losses.append(0)
-        level_loss_values.append(0)
         level_opts.append(0)
     
 	level_images_tensor.append(tf.convert_to_tensor(level_images[i][0:FLAGS.batch_size], dtype=tf.float32))
@@ -149,7 +149,9 @@ def main(_):
 		    else:
 			logit_t = np.append(logit_t,batch_logit_t,axis=0)
 	    print(np.shape(logit_t))
-            level_loss_values.append( loss_t)
+	    print(np.shape(loss_t))
+            level_loss_values[i].append(np.mean( loss_t))
+	    level_num_values[i].append(len(level_images[i]))
 	    # level_logit_values[i] = logit_t
 	    # test accuracy
 	    # xxx
@@ -190,6 +192,10 @@ def main(_):
 		del_mask = del_mask + move_mask[k]
 	    level_images[i] = np.delete(level_images[i],del_mask,axis=0)
 	    level_labels[i] = np.delete(level_labels[i],del_mask,axis=0)
+
+	    
+	    print(level_loss_values[i])
+	    print(level_num_values[i])
 
 
 
