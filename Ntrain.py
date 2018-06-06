@@ -92,6 +92,9 @@ def main(_):
     level_losses = []
     level_loss_values = []
     level_opts = []
+    #Y.D.
+    level_images_tensor=[]
+    level_labels_tensor=[]
     for i in range(FLAGS.level_number):
         level_logits.append(0)
         #level_logit_values.append(0)
@@ -99,6 +102,8 @@ def main(_):
         level_loss_values.append(0)
         level_opts.append(0)
     
+	level_images_tensor.append(tf.convert_to_tensor(level_images[i][0:FLAGS.batch_size], dtype=tf.float32))
+	level_labels_tensor.append(tf.convert_to_tensor(level_labels[i][0:FLAGS.batch_size], dtype=tf.float32))
 
     for i in range(FLAGS.level_number):
         # train for every model
@@ -108,14 +113,14 @@ def main(_):
             print('level '+str(i)+':')
             print(level_images[i].shape)
             if i == 0:
-                level_logits[i] = Dmodels.level_infers_op_0(level_images[i], FLAGS)
-                level_losses[i] = Dmodels.level_losses_op_0(level_labels[i], level_logits[i])
+                level_logits[i] = Dmodels.level_infers_op_0(level_images_tensor[i], FLAGS)
+                level_losses[i] = Dmodels.level_losses_op_0(level_labels_tensor[i], level_logits[i])
             elif i == 1:
-                level_logits[i] = Dmodels.level_infers_op_1(level_images[i], FLAGS)
-                level_losses[i] = Dmodels.level_losses_op_1(level_labels[i], level_logits[i])
+                level_logits[i] = Dmodels.level_infers_op_1(level_images_tensor[i], FLAGS)
+                level_losses[i] = Dmodels.level_losses_op_1(level_labels_tensor[i], level_logits[i])
             elif i == 2:
-                level_logits[i] = Dmodels.level_infers_op_2(level_images[i], FLAGS)
-                level_losses[i] = Dmodels.level_losses_op_2(level_labels[i], level_logits[i])
+                level_logits[i] = Dmodels.level_infers_op_2(level_images_tensor[i], FLAGS)
+                level_losses[i] = Dmodels.level_losses_op_2(level_labels_tensor[i], level_logits[i])
             else:
                 print("unsupported level "+ str(i)+"!")
 
@@ -125,55 +130,67 @@ def main(_):
     init = tf.global_variables_initializer()
 
     # Start running operations on the Graph.
-    sess = tf.Session(config=tf.ConfigProto(log_device_placement=FLAGS.log_device_placement))
+    #sess = tf.Session(config=tf.ConfigProto(log_device_placement=FLAGS.log_device_placement))
+    sess = tf.Session()
     sess.run(init)
 
 
     for it in range(FLAGS.max_iter):
-        # iteration
+	print('iter'+str(it))
         for i in range(FLAGS.level_number):
-            _, loss_t, logit_t = sess.run([level_opts[i], level_losses[i], level_logits[i]])
-            level_loss_values[i] = loss_t
-            # level_logit_values[i] = logit_t
-            # test accuracy
-            # xxx
-            # print
-
+	    print('level'+str(i))
+	    #for level_
+	    loss_t = []
+	    for batch_i in range(len(level_images[i])//FLAGS.batch_size):
+		    _, batch_loss_t, batch_logit_t = sess.run([level_opts[i], level_losses[i], level_logits[i]],{level_images_tensor[i]:level_images[i][FLAGS.batch_size*batch_i:FLAGS.batch_size*(batch_i+1)] })
+		    loss_t.append( batch_loss_t)
+		    if batch_i == 0:
+			logit_t = np.array(batch_logit_t)
+		    else:
+			logit_t = np.append(logit_t,batch_logit_t,axis=0)
+	    print(np.shape(logit_t))
+            level_loss_values.append( loss_t)
+	    # level_logit_values[i] = logit_t
+	    # test accuracy
+	    # xxx
+         # print
+ 	  # logit_t = sess.run( level_logits[i] )
             # move samples
+	    print('training finished, start to move samples')
             output = np.argmax(logit_t, 1)
-            for j in range(output.shape[0]):
-                if output[j] == level_labels[i][j]:
-                    if np.random.random_sample() > np.exp(-A*T):
-                        if i<1:
-                            level_image[i+1].append(level_image[i].pop(j))
-                            level_labels[i+1].append(level_labels[i].pop(j))
-                        elif i>(FLAGS.level_number-2):
-                            level_image[i-1].append(level_image[i].pop(j))
-                            level_labels[i-1].append(level_labels[i].pop(j))
-                        else:
-                            if np.random.random_sample() < 0.5:
-                                level_image[i+1].append(level_image[i].pop(j))
-                                level_labels[i+1].append(level_labels[i].pop(j))
-                            else:
-                                level_image[i-1].append(level_image[i].pop(j))
-                                level_labels[i-1].append(level_labels[i].pop(j))
-                else:
-                    if np.random.random_sample() > np.exp(-B*T):
-                        if i<1:
-                            level_image[i+1].append(level_image[i].pop(j))
-                            level_labels[i+1].append(level_labels[i].pop(j))
-                        elif i>(FLAGS.level_number-2):
-                            level_image[i-1].append(level_image[i].pop(j))
-                            level_labels[i-1].append(level_labels[i].pop(j))
-                        else:
-                            if np.random.random_sample() < 0.5:
-                                level_image[i+1].append(level_image[i].pop(j))
-                                level_labels[i+1].append(level_labels[i].pop(j))
-                            else:
-                                level_image[i-1].append(level_image[i].pop(j))
-                                level_labels[i-1].append(level_labels[i].pop(j))
-    
-    
+	    move_mask = [[] for k in range(FLAGS.level_number)]
+	    for j in range(output.shape[0]):
+		if output[j] == level_labels[i][j]:
+		    if np.random.random_sample() > np.exp(-A*T):
+			if i<1:
+			    move_mask[i+1].append(j)
+			elif i>(FLAGS.level_number-2):
+			    move_mask[i-1].append(j)
+			else:
+			    if np.random.random_sample() < 0.5:
+			        move_mask[i+1].append(j)
+			    else:
+			        move_mask[i-1].append(j)
+		else:
+		    if np.random.random_sample() > np.exp(-B*T):
+			if i<1:
+			    move_mask[i+1].append(j)
+			elif i>(FLAGS.level_number-2):
+			    move_mask[i-1].append(j)
+			else:
+			    if np.random.random_sample() < 0.5:
+			        move_mask[i+1].append(j)
+			    else:
+			        move_mask[i-1].append(j)
+
+	    del_mask = []
+	    for k in range(FLAGS.level_number):
+	        level_images[k] = np.append(level_images[k],level_images[i][move_mask[k]],axis=0)
+	        level_labels[k] = np.append(level_labels[k],level_labels[i][move_mask[k]],axis=0)
+		del_mask = del_mask + move_mask[k]
+	    level_images[i] = np.delete(level_images[i],del_mask,axis=0)
+	    level_labels[i] = np.delete(level_labels[i],del_mask,axis=0)
+
 
 
 if __name__ == '__main__':
