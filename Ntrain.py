@@ -139,6 +139,7 @@ def main(_):
     pred_result = [[0 for i in range(50000)] for j in range(3)]
 
     for it in range(FLAGS.max_iter):
+	global T
 	T = T - 20
 	print('iter'+str(it))
         for i in range(FLAGS.level_number):
