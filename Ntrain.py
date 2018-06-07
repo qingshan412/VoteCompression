@@ -178,7 +178,6 @@ def main(_):
 		    #else:
 			#logit_t = np.append(logit_t,batch_logit_t,axis=0)
 	    #print(np.shape(logit_t))
-	    print(np.shape(loss_t))
             level_loss_values[i].append(np.mean( loss_t))
 	    level_num_values[i].append(len(level_images[i]))
 	    # test accuracy
@@ -187,9 +186,15 @@ def main(_):
             #output = np.argmax(logit_t, 1)
 	print('training finished, start to decide which sampes to be moved')
 	move_mask = [[[] for k in range(FLAGS.level_number)]for j in range(FLAGS.level_number)]
+	nums = [0 for i in range(3)]
+	Cnums = [0 for i in range(3)]
+	Wnums = [0 for i in range(3)]
+	Acc_log = []
 	for i in range(FLAGS.level_number):
-	    for j in range(len(level_images[i])):
+	    nums[i]=len(level_images[i])
+	    for j in range(nums[i]):
 		if pred_result[i][j] == level_labels[i][j]:
+		    Cnums[i] = Cnums[i] + 1
 		    if np.random.random_sample() > np.exp(-A*T):
 			if i<1:
 			    move_mask[i][i+1].append(j)
@@ -213,6 +218,14 @@ def main(_):
 			        move_mask[i][i-1].append(j)
 
 	del_mask = [[]for j in range(FLAGS.level_number)]
+	iter_acc = []
+	Csum=0
+	for i in range(FLAGS.level_number):
+	    iter_acc.append(Cnums[i]/nums[i])
+	    Csum = Csum + Cnums[i]
+	iter_acc.append(Csum/50000)
+	Acc_log.append(iter_acc)
+	print('acc: '+str(Acc_log[-1]))
 	print('move samples')
 	for i in range(FLAGS.level_number):
 	    for k in range(FLAGS.level_number):
