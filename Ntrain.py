@@ -15,7 +15,7 @@ import Dmodels
 flags = tf.app.flags
 flags.DEFINE_integer("level_number", 3, "Number of different classifiers [3]")
 flags.DEFINE_integer("image_size", 32, "The size of images [32]")
-flags.DEFINE_integer("max_iter", 10, "Max number of iterations [10]")
+flags.DEFINE_integer("max_iter", 500, "Max number of iterations [10]")
 flags.DEFINE_string("data_dir", "../../../data", "Directory to datasets [../../../data]")
 flags.DEFINE_string("dataset", "cifar10", "The name of dataset [cifar10]")
 
@@ -58,6 +58,7 @@ def level_assign(images, labels, levels):
 #     return level_infers_op, level_losses_op
 
 def main(_):
+    
     np.random.seed(22)
 
     levels = level_init()
@@ -138,6 +139,7 @@ def main(_):
     pred_result = [[0 for i in range(50000)] for j in range(3)]
 
     for it in range(FLAGS.max_iter):
+	T = T - 20
 	print('iter'+str(it))
         for i in range(FLAGS.level_number):
 	    print('level'+str(i))
