@@ -134,64 +134,94 @@ def main(_):
     sess = tf.Session()
     sess.run(init)
 
+    steps_per_iter = 500
+    pred_result = [[0 for i in range(50000)] for j in range(3)]
 
     for it in range(FLAGS.max_iter):
 	print('iter'+str(it))
         for i in range(FLAGS.level_number):
 	    print('level'+str(i))
+	    print('number of sample:'+str(len(level_images[i])))
 	    #for level_
 	    loss_t = []
-	    for batch_i in range(len(level_images[i])//FLAGS.batch_size):
-		    _, batch_loss_t, batch_logit_t = sess.run([level_opts[i], level_losses[i], level_logits[i]],{level_images_tensor[i]:level_images[i][FLAGS.batch_size*batch_i:FLAGS.batch_size*(batch_i+1)] })
-		    loss_t.append( batch_loss_t)
-		    if batch_i == 0:
-			logit_t = np.array(batch_logit_t)
+	    start_i=0
+	    end_i=FLAGS.batch_size
+	    for batch_i in range(steps_per_iter):
+		    if start_i >= len(level_images[i]):
+	    		batch_images = np.array(level_images[i][0:FLAGS.batch_size])
+	    		batch_labels = np.array(level_labels[i][0:FLAGS.batch_size])
+			start_i = 0
+			end_i = FLAGS.batch_size
 		    else:
-			logit_t = np.append(logit_t,batch_logit_t,axis=0)
-	    print(np.shape(logit_t))
+			if end_i > len(level_images[i]):
+	    		    batch_images = np.array(level_images[i][start_i:len(level_images[i])])
+	    		    batch_labels = np.array(level_labels[i][start_i:len(level_labels[i])])
+			    batch_images = np.append(batch_images,level_images[0:(end_i-FLAGS.batch_size)],axis=0)
+			    batch_labels = np.append(batch_labels,level_labels[0:(end_i-FLAGS.batch_size)],axis=0)
+			    start_i = end_i-FLAGS.batch_size
+			    end_i = start_i + FLAGS.batch_size
+			else:
+	    		    batch_images = np.array(level_images[i][start_i:end_i])
+	    		    batch_labels = np.array(level_labels[i][start_i:end_i])
+
+		    _, batch_loss_t, batch_logit_t = sess.run([level_opts[i], level_losses[i], level_logits[i]],{level_images_tensor[i]:batch_images, level_labels_tensor[i]:batch_labels })
+		    loss_t.append( batch_loss_t)
+		    batch_out = np.argmax(batch_logit_t,1)
+		    pred_i = 0
+		    for pred in batch_out:
+			if pred_i>len(level_images[i]):
+			    pred_i = 0
+			pred_result[i][pred_i] = pred
+			pred_i =pred_i + 1
+		    #if batch_i == 0:
+			#logit_t = np.array(batch_logit_t)
+		    #else:
+			#logit_t = np.append(logit_t,batch_logit_t,axis=0)
+	    #print(np.shape(logit_t))
 	    print(np.shape(loss_t))
             level_loss_values[i].append(np.mean( loss_t))
 	    level_num_values[i].append(len(level_images[i]))
-	    # level_logit_values[i] = logit_t
 	    # test accuracy
 	    # xxx
-         # print
- 	  # logit_t = sess.run( level_logits[i] )
             # move samples
-	    print('training finished, start to move samples')
-            output = np.argmax(logit_t, 1)
-	    move_mask = [[] for k in range(FLAGS.level_number)]
-	    for j in range(output.shape[0]):
-		if output[j] == level_labels[i][j]:
+            #output = np.argmax(logit_t, 1)
+	print('training finished, start to decide which sampes to be moved')
+	move_mask = [[[] for k in range(FLAGS.level_number)]for j in range(FLAGS.level_number)]
+	for i in range(FLAGS.level_number):
+	    for j in range(len(level_images[i])):
+		if pred_result[i][j] == level_labels[i][j]:
 		    if np.random.random_sample() > np.exp(-A*T):
 			if i<1:
-			    move_mask[i+1].append(j)
+			    move_mask[i][i+1].append(j)
 			elif i>(FLAGS.level_number-2):
-			    move_mask[i-1].append(j)
+			    move_mask[i][i-1].append(j)
 			else:
 			    if np.random.random_sample() < 0.5:
-			        move_mask[i+1].append(j)
+			        move_mask[i][i+1].append(j)
 			    else:
-			        move_mask[i-1].append(j)
+			        move_mask[i][i-1].append(j)
 		else:
 		    if np.random.random_sample() > np.exp(-B*T):
 			if i<1:
-			    move_mask[i+1].append(j)
+			    move_mask[i][i+1].append(j)
 			elif i>(FLAGS.level_number-2):
-			    move_mask[i-1].append(j)
+			    move_mask[i][i-1].append(j)
 			else:
 			    if np.random.random_sample() < 0.5:
-			        move_mask[i+1].append(j)
+			        move_mask[i][i+1].append(j)
 			    else:
-			        move_mask[i-1].append(j)
+			        move_mask[i][i-1].append(j)
 
-	    del_mask = []
+	del_mask = [[]for j in range(FLAGS.level_number)]
+	print('move samples')
+	for i in range(FLAGS.level_number):
 	    for k in range(FLAGS.level_number):
-	        level_images[k] = np.append(level_images[k],level_images[i][move_mask[k]],axis=0)
-	        level_labels[k] = np.append(level_labels[k],level_labels[i][move_mask[k]],axis=0)
-		del_mask = del_mask + move_mask[k]
-	    level_images[i] = np.delete(level_images[i],del_mask,axis=0)
-	    level_labels[i] = np.delete(level_labels[i],del_mask,axis=0)
+	    	print(str(i)+' move to '+str(k)+': '+str(len(move_mask[i][k])))
+		level_images[k] = np.append(level_images[k],level_images[i][move_mask[i][k]],axis=0)
+	        level_labels[k] = np.append(level_labels[k],level_labels[i][move_mask[i][k]],axis=0)
+		del_mask[i] = del_mask[i] + move_mask[i][k]
+	    level_images[i] = np.delete(level_images[i],del_mask[i],axis=0)
+	    level_labels[i] = np.delete(level_labels[i],del_mask[i],axis=0)
 
 	    
 	    print(level_loss_values[i])
