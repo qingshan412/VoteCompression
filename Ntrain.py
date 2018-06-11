@@ -23,9 +23,8 @@ flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
 
 FLAGS = flags.FLAGS
 
-T = 10000 #initial temperature
-A = 10 #coefficient for stay prob when correct (e^(-A*T))
-B = 100 #coefficient for stay prob when when wrong (e^(-B*T))
+A = 0.05 #coefficient for stay prob when correct (e^(-A*T))
+B = 0.01 #coefficient for stay prob when when wrong (e^(-B*T))
 
 def level_init():
     with np.load(os.path.join(FLAGS.data_dir,FLAGS.dataset,
@@ -76,7 +75,7 @@ def main(_):
     # print(np.unique(levels))
 
     level_images, level_labels = level_assign(images, labels, levels)
-
+    #print(level_labels[0])
     # print('level_images:')
     # print(len(level_images))
     # print(level_images[0].shape)
@@ -138,13 +137,16 @@ def main(_):
     steps_per_iter = 500
     pred_result = [[0 for i in range(50000)] for j in range(3)]
 
+    T = 0
     for it in range(FLAGS.max_iter):
-	global T
-	T = T - 20
+	T = T + 1
 	print('iter'+str(it))
         for i in range(FLAGS.level_number):
 	    print('level'+str(i))
 	    print('number of sample:'+str(len(level_images[i])))
+	    permu = np.random.permutation(level_images[i].shape[0])
+	    level_images[i] = level_images[i][permu]
+	    level_labels[i] = level_labels[i][permu]
 	    #for level_
 	    loss_t = []
 	    start_i=0
@@ -159,13 +161,15 @@ def main(_):
 			if end_i > len(level_images[i]):
 	    		    batch_images = np.array(level_images[i][start_i:len(level_images[i])])
 	    		    batch_labels = np.array(level_labels[i][start_i:len(level_labels[i])])
-			    batch_images = np.append(batch_images,level_images[0:(end_i-FLAGS.batch_size)],axis=0)
-			    batch_labels = np.append(batch_labels,level_labels[0:(end_i-FLAGS.batch_size)],axis=0)
-			    start_i = end_i-FLAGS.batch_size
+			    batch_images = np.append(batch_images,level_images[i][0:(end_i-len(level_images[i]))],axis=0)
+			    batch_labels = np.append(batch_labels,level_labels[i][0:(end_i-len(level_images[i]))],axis=0)
+			    start_i = end_i-len(level_images[i])
 			    end_i = start_i + FLAGS.batch_size
 			else:
 	    		    batch_images = np.array(level_images[i][start_i:end_i])
 	    		    batch_labels = np.array(level_labels[i][start_i:end_i])
+			    start_i = start_i + FLAGS.batch_size
+			    end_i = end_i + FLAGS.batch_size
 
 		    _, batch_loss_t, batch_logit_t = sess.run([level_opts[i], level_losses[i], level_logits[i]],{level_images_tensor[i]:batch_images, level_labels_tensor[i]:batch_labels })
 		    loss_t.append( batch_loss_t)
@@ -191,34 +195,51 @@ def main(_):
 	move_mask = [[[] for k in range(FLAGS.level_number)]for j in range(FLAGS.level_number)]
 	nums = [0 for i in range(3)]
 	Cnums = [0 for i in range(3)]
-	Wnums = [0 for i in range(3)]
+	numsDis = [[0 for j in range(10)] for i in range(3)]
+	CnumsDis = [[0 for j in range(10)] for i in range(3)]
+	predDis = [[0 for j in range(10)] for i in range(3)]
 	Acc_log = []
 	for i in range(FLAGS.level_number):
 	    nums[i]=len(level_images[i])
 	    for j in range(nums[i]):
+		numsDis[i][level_labels[i][j]] = numsDis[i][level_labels[i][j]] + 1
+		predDis[i][pred_result[i][j]] = predDis[i][pred_result[i][j]] + 1
 		if pred_result[i][j] == level_labels[i][j]:
+		    CnumsDis[i][level_labels[i][j]] = CnumsDis[i][level_labels[i][j]] + 1
 		    Cnums[i] = Cnums[i] + 1
-		    if np.random.random_sample() > np.exp(-A*T):
-			if i<1:
-			    move_mask[i][i+1].append(j)
-			elif i>(FLAGS.level_number-2):
+		    if np.random.random_sample() < np.exp(-A*T):
+			if i>0:
 			    move_mask[i][i-1].append(j)
-			else:
-			    if np.random.random_sample() < 0.5:
-			        move_mask[i][i+1].append(j)
-			    else:
-			        move_mask[i][i-1].append(j)
+			#if i<1:
+			    #move_mask[i][i+1].append(j)
+			#elif i>(FLAGS.level_number-2):
+			#    move_mask[i][i-1].append(j)
+			#else:
+			#    if np.random.random_sample() < 0.5:
+			#        move_mask[i][i+1].append(j)
+			#    else:
+			#        move_mask[i][i-1].append(j)
 		else:
-		    if np.random.random_sample() > np.exp(-B*T):
-			if i<1:
-			    move_mask[i][i+1].append(j)
-			elif i>(FLAGS.level_number-2):
+		    if np.random.random_sample() < np.exp(-B*T):
+			if i == 0:
+			   move_mask[i][i+1].append(j)
+			elif i == FLAGS.level_number-1:
+			    if np.random.random_sample()<0.3:
+				move_mask[i][i-1].append(j)
+			elif np.random.random_sample()<0.3:
 			    move_mask[i][i-1].append(j)
 			else:
-			    if np.random.random_sample() < 0.5:
-			        move_mask[i][i+1].append(j)
-			    else:
-			        move_mask[i][i-1].append(j)
+			    move_mask[i][i+1].append(j)
+			
+			#if i<1:
+			#    move_mask[i][i+1].append(j)
+			#elif i>(FLAGS.level_number-2):
+			#    move_mask[i][i-1].append(j)
+			#else:
+			#    if np.random.random_sample() < 0.5:
+			#        move_mask[i][i+1].append(j)
+			#    else:
+			#        move_mask[i][i-1].append(j)
 
 	del_mask = [[]for j in range(FLAGS.level_number)]
 	iter_acc = []
@@ -229,6 +250,11 @@ def main(_):
 	iter_acc.append(Csum/50000)
 	Acc_log.append(iter_acc)
 	print('acc: '+str(Acc_log[-1]))
+	for  i in range(FLAGS.level_number):
+		print('level'+str(i))
+		print(numsDis[i])
+		print(CnumsDis[i])
+		print(predDis[i])
 	print('move samples')
 	for i in range(FLAGS.level_number):
 	    for k in range(FLAGS.level_number):
